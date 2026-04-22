@@ -1,0 +1,1122 @@
+openapi: 3.0.3
+info:
+  title: Belimbing Bank Saving System API
+  description: |
+    REST API for managing bank customers, accounts, deposito types, and transactions.
+
+    ## Base URL
+    - **Local:** `http://localhost:5000/api/v1`
+    - **Production:** `https://<your-app>.railway.app/api/v1`
+
+    ## Standard Response Format
+    All endpoints return a consistent response envelope:
+    ```json
+    { "success": true, "message": "...", "data": { ... } }
+    ```
+
+    ## Interest Formula (Withdrawal)
+    ```
+    monthly_return_rate = yearly_return / 12 / 100
+    interest_earned     = starting_balance × months_held × monthly_return_rate
+    ending_balance      = starting_balance + interest_earned − amount_withdrawn
+    ```
+
+  version: 1.0.0
+  contact:
+    name: Muhammad Afif Naufal
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local development
+  - url: https://<your-app>.railway.app/api/v1
+    description: Production (Railway)
+
+tags:
+  - name: Customers
+    description: Manage bank customers
+  - name: Deposito Types
+    description: Manage deposito/savings product types
+  - name: Accounts
+    description: Manage customer savings accounts
+  - name: Transactions
+    description: Deposit, withdraw, and view transaction history
+
+# ─────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────
+paths:
+
+  # ── CUSTOMERS ──────────────────────────────────────────────
+  /customers:
+    get:
+      tags: [Customers]
+      summary: List all customers
+      description: Returns all customers with a summary of their accounts.
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CustomerWithAccounts'
+              example:
+                success: true
+                message: Success
+                data:
+                  - id: 1
+                    name: Budi Santoso
+                    created_at: "2026-04-01T07:00:00.000Z"
+                    updated_at: "2026-04-01T07:00:00.000Z"
+                    accounts:
+                      - id: 1
+                        packet: Tabungan Reguler
+                        balance: "5000000.00"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags: [Customers]
+      summary: Create a new customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+            example:
+              name: Budi Santoso
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Customer'
+              example:
+                success: true
+                message: Customer created successfully
+                data:
+                  id: 4
+                  name: Budi Santoso
+                  created_at: "2026-04-22T08:00:00.000Z"
+                  updated_at: "2026-04-22T08:00:00.000Z"
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /customers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags: [Customers]
+      summary: Get a single customer
+      description: Returns a customer with all their accounts and deposito type details.
+      responses:
+        '200':
+          description: Customer found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CustomerDetail'
+              example:
+                success: true
+                message: Success
+                data:
+                  id: 1
+                  name: Budi Santoso
+                  accounts:
+                    - id: 1
+                      packet: Tabungan Reguler
+                      balance: "5000000.00"
+                      deposito_type:
+                        id: 1
+                        name: Deposito Bronze
+                        yearly_return: "3.00"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags: [Customers]
+      summary: Update a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInput'
+            example:
+              name: Budi Santoso Updated
+      responses:
+        '200':
+          description: Customer updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Customer'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags: [Customers]
+      summary: Delete a customer
+      description: |
+        Deletes a customer. Will return **400** if the customer still has active accounts.
+        You must delete all accounts first.
+      responses:
+        '200':
+          description: Customer deleted
+          content:
+            application/json:
+              example:
+                success: true
+                message: Customer deleted successfully
+                data: null
+        '400':
+          description: Customer has existing accounts
+          content:
+            application/json:
+              example:
+                success: false
+                message: Cannot delete customer with existing accounts. Please delete accounts first.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ── DEPOSITO TYPES ─────────────────────────────────────────
+  /deposito-types:
+    get:
+      tags: [Deposito Types]
+      summary: List all deposito types
+      responses:
+        '200':
+          description: List of deposito types
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DepositoType'
+              example:
+                success: true
+                message: Success
+                data:
+                  - id: 1
+                    name: Deposito Bronze
+                    yearly_return: "3.00"
+                  - id: 2
+                    name: Deposito Silver
+                    yearly_return: "5.00"
+                  - id: 3
+                    name: Deposito Gold
+                    yearly_return: "7.00"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags: [Deposito Types]
+      summary: Create a new deposito type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositoTypeInput'
+            example:
+              name: Deposito Platinum
+              yearly_return: 9.5
+      responses:
+        '201':
+          description: Deposito type created
+          content:
+            application/json:
+              example:
+                success: true
+                message: Deposito type created successfully
+                data:
+                  id: 4
+                  name: Deposito Platinum
+                  yearly_return: "9.50"
+        '400':
+          description: Duplicate name
+          content:
+            application/json:
+              example:
+                success: false
+                message: Deposito type name already exists
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /deposito-types/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags: [Deposito Types]
+      summary: Get a single deposito type
+      responses:
+        '200':
+          description: Deposito type found
+          content:
+            application/json:
+              example:
+                success: true
+                message: Success
+                data:
+                  id: 3
+                  name: Deposito Gold
+                  yearly_return: "7.00"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags: [Deposito Types]
+      summary: Update a deposito type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositoTypeInput'
+            example:
+              name: Deposito Gold
+              yearly_return: 8.0
+      responses:
+        '200':
+          description: Deposito type updated
+          content:
+            application/json:
+              example:
+                success: true
+                message: Deposito type updated successfully
+                data:
+                  id: 3
+                  name: Deposito Gold
+                  yearly_return: "8.00"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags: [Deposito Types]
+      summary: Delete a deposito type
+      description: |
+        Will return **400** if the deposito type is currently used by any account.
+      responses:
+        '200':
+          description: Deposito type deleted
+          content:
+            application/json:
+              example:
+                success: true
+                message: Deposito type deleted successfully
+                data: null
+        '400':
+          description: Deposito type is in use
+          content:
+            application/json:
+              example:
+                success: false
+                message: Deposito type is in use by accounts
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ── ACCOUNTS ───────────────────────────────────────────────
+  /accounts:
+    get:
+      tags: [Accounts]
+      summary: List all accounts
+      description: Returns all accounts with customer and deposito type details.
+      responses:
+        '200':
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AccountDetail'
+              example:
+                success: true
+                message: Success
+                data:
+                  - id: 1
+                    packet: Tabungan Reguler
+                    balance: "5000000.00"
+                    customer:
+                      id: 1
+                      name: Budi Santoso
+                    deposito_type:
+                      id: 1
+                      name: Deposito Bronze
+                      yearly_return: "3.00"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags: [Accounts]
+      summary: Create a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountInput'
+            example:
+              packet: Tabungan Reguler
+              customer_id: 1
+              deposito_type_id: 2
+              balance: 5000000
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              example:
+                success: true
+                message: Account created successfully
+                data:
+                  id: 5
+                  packet: Tabungan Reguler
+                  balance: "5000000.00"
+                  customer:
+                    id: 1
+                    name: Budi Santoso
+                  deposito_type:
+                    id: 2
+                    name: Deposito Silver
+                    yearly_return: "5.00"
+        '404':
+          description: Customer or deposito type not found
+          content:
+            application/json:
+              example:
+                success: false
+                message: Customer not found
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /accounts/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+
+    get:
+      tags: [Accounts]
+      summary: Get a single account
+      responses:
+        '200':
+          description: Account found
+          content:
+            application/json:
+              example:
+                success: true
+                message: Success
+                data:
+                  id: 1
+                  packet: Tabungan Reguler
+                  balance: "5000000.00"
+                  customer:
+                    id: 1
+                    name: Budi Santoso
+                  deposito_type:
+                    id: 1
+                    name: Deposito Bronze
+                    yearly_return: "3.00"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags: [Accounts]
+      summary: Update an account
+      description: Only `packet`, `customer_id`, and `deposito_type_id` can be updated. Balance is managed via transactions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                packet:
+                  type: string
+                  example: Tabungan Premium
+                customer_id:
+                  type: integer
+                  example: 1
+                deposito_type_id:
+                  type: integer
+                  example: 3
+      responses:
+        '200':
+          description: Account updated
+          content:
+            application/json:
+              example:
+                success: true
+                message: Account updated successfully
+                data:
+                  id: 1
+                  packet: Tabungan Premium
+                  balance: "5000000.00"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags: [Accounts]
+      summary: Delete an account
+      description: Deleting an account also deletes all its transactions (CASCADE).
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              example:
+                success: true
+                message: Account deleted successfully
+                data: null
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /accounts/customer/{customerId}:
+    get:
+      tags: [Accounts]
+      summary: Get all accounts for a customer
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Accounts for the customer
+          content:
+            application/json:
+              example:
+                success: true
+                message: Success
+                data:
+                  - id: 1
+                    packet: Tabungan Reguler
+                    balance: "5000000.00"
+                    deposito_type:
+                      id: 1
+                      name: Deposito Bronze
+                      yearly_return: "3.00"
+                  - id: 2
+                    packet: Tabungan Premium
+                    balance: "20000000.00"
+                    deposito_type:
+                      id: 3
+                      name: Deposito Gold
+                      yearly_return: "7.00"
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              example:
+                success: false
+                message: Customer not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ── TRANSACTIONS ───────────────────────────────────────────
+  /transactions/account/{accountId}:
+    get:
+      tags: [Transactions]
+      summary: Get transaction history for an account
+      description: Returns all transactions for the given account, ordered by date descending.
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Transaction'
+              example:
+                success: true
+                message: Success
+                data:
+                  - id: 2
+                    account_id: 1
+                    type: withdraw
+                    amount: "500000.00"
+                    transaction_date: "2026-04-22"
+                    starting_balance: "5000000.00"
+                    ending_balance: "4587500.00"
+                    interest_earned: "87500.00"
+                    months_held: 3
+                    created_at: "2026-04-22T08:30:00.000Z"
+                  - id: 1
+                    account_id: 1
+                    type: deposit
+                    amount: "5000000.00"
+                    transaction_date: "2026-01-22"
+                    starting_balance: "0.00"
+                    ending_balance: "5000000.00"
+                    interest_earned: null
+                    months_held: null
+                    created_at: "2026-01-22T08:00:00.000Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /transactions/deposit:
+    post:
+      tags: [Transactions]
+      summary: Deposit to an account
+      description: |
+        Adds balance to an account and records the transaction.
+
+        - `starting_balance`: balance before this deposit
+        - `ending_balance`: balance after this deposit (`starting + amount`)
+        - No interest is calculated on deposit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositInput'
+            example:
+              account_id: 1
+              amount: 1000000
+              transaction_date: "2026-04-22"
+      responses:
+        '201':
+          description: Deposit successful
+          content:
+            application/json:
+              example:
+                success: true
+                message: Deposit successful
+                data:
+                  transaction_id: 5
+                  type: deposit
+                  amount: 1000000
+                  transaction_date: "2026-04-22"
+                  starting_balance: 5000000
+                  new_balance: 6000000
+        '400':
+          description: Amount must be greater than 0
+          content:
+            application/json:
+              example:
+                success: false
+                message: Amount must be greater than 0
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /transactions/withdraw:
+    post:
+      tags: [Transactions]
+      summary: Withdraw from an account
+      description: |
+        Deducts balance from an account with **automatic interest calculation**.
+
+        ### Interest Formula
+        ```
+        monthly_return_rate = yearly_return / 12 / 100
+        interest_earned     = starting_balance × months_held × monthly_return_rate
+        ending_balance      = starting_balance + interest_earned − amount_withdrawn
+        ```
+
+        `months_held` is calculated from the **last deposit date** (or account creation date) to the withdrawal date.
+
+        ### Business Rules
+        - Amount must be > 0
+        - Amount cannot exceed current balance
+        - Balance cannot go below 0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawInput'
+            example:
+              account_id: 1
+              amount: 500000
+              transaction_date: "2026-04-22"
+      responses:
+        '201':
+          description: Withdrawal successful with interest breakdown
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WithdrawResult'
+              example:
+                success: true
+                message: Withdrawal successful
+                data:
+                  transaction_id: 6
+                  type: withdraw
+                  transaction_date: "2026-04-22"
+                  starting_balance: 5000000
+                  amount_withdrawn: 500000
+                  months_held: 3
+                  yearly_return: 7.00
+                  monthly_return_rate: 0.5833
+                  interest_earned: 87500
+                  balance_before_withdrawal: 5087500
+                  ending_balance: 4587500
+        '400':
+          description: Insufficient balance or invalid amount
+          content:
+            application/json:
+              examples:
+                insufficient:
+                  summary: Insufficient balance
+                  value:
+                    success: false
+                    message: Insufficient balance
+                zero_amount:
+                  summary: Zero or negative amount
+                  value:
+                    success: false
+                    message: Amount must be greater than 0
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+# ─────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────
+components:
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      description: Resource ID
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+
+  schemas:
+
+    # ── Base response wrapper ──
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          nullable: true
+
+    # ── Customer ──
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Budi Santoso
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CustomerWithAccounts:
+      allOf:
+        - $ref: '#/components/schemas/Customer'
+        - type: object
+          properties:
+            accounts:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  packet:
+                    type: string
+                  balance:
+                    type: string
+
+    CustomerDetail:
+      allOf:
+        - $ref: '#/components/schemas/Customer'
+        - type: object
+          properties:
+            accounts:
+              type: array
+              items:
+                $ref: '#/components/schemas/AccountDetail'
+
+    CustomerInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Budi Santoso
+
+    # ── Deposito Type ──
+    DepositoType:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Deposito Gold
+        yearly_return:
+          type: string
+          description: Annual interest rate in percent
+          example: "7.00"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DepositoTypeInput:
+      type: object
+      required: [name, yearly_return]
+      properties:
+        name:
+          type: string
+          example: Deposito Platinum
+        yearly_return:
+          type: number
+          format: float
+          minimum: 0.01
+          maximum: 100
+          description: Annual return percentage (e.g. 7.0 = 7%)
+          example: 9.5
+
+    # ── Account ──
+    AccountDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        packet:
+          type: string
+          example: Tabungan Reguler
+        balance:
+          type: string
+          example: "5000000.00"
+        customer_id:
+          type: integer
+          example: 1
+        deposito_type_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        customer:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        deposito_type:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            yearly_return:
+              type: string
+
+    AccountInput:
+      type: object
+      required: [packet, customer_id, deposito_type_id]
+      properties:
+        packet:
+          type: string
+          example: Tabungan Reguler
+        customer_id:
+          type: integer
+          minimum: 1
+          example: 1
+        deposito_type_id:
+          type: integer
+          minimum: 1
+          example: 2
+        balance:
+          type: number
+          format: float
+          minimum: 0
+          default: 0
+          example: 5000000
+
+    # ── Transaction ──
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        account_id:
+          type: integer
+          example: 1
+        type:
+          type: string
+          enum: [deposit, withdraw]
+          example: withdraw
+        amount:
+          type: string
+          example: "500000.00"
+        transaction_date:
+          type: string
+          format: date
+          example: "2026-04-22"
+        starting_balance:
+          type: string
+          example: "5000000.00"
+        ending_balance:
+          type: string
+          nullable: true
+          example: "4587500.00"
+        interest_earned:
+          type: string
+          nullable: true
+          description: Only present for withdraw transactions
+          example: "87500.00"
+        months_held:
+          type: integer
+          nullable: true
+          description: Only present for withdraw transactions
+          example: 3
+        created_at:
+          type: string
+          format: date-time
+
+    DepositInput:
+      type: object
+      required: [account_id, amount, transaction_date]
+      properties:
+        account_id:
+          type: integer
+          minimum: 1
+          example: 1
+        amount:
+          type: number
+          format: float
+          minimum: 0.01
+          example: 1000000
+        transaction_date:
+          type: string
+          format: date
+          example: "2026-04-22"
+
+    WithdrawInput:
+      type: object
+      required: [account_id, amount, transaction_date]
+      properties:
+        account_id:
+          type: integer
+          minimum: 1
+          example: 1
+        amount:
+          type: number
+          format: float
+          minimum: 0.01
+          example: 500000
+        transaction_date:
+          type: string
+          format: date
+          example: "2026-04-22"
+
+    WithdrawResult:
+      type: object
+      properties:
+        transaction_id:
+          type: integer
+          example: 6
+        type:
+          type: string
+          example: withdraw
+        transaction_date:
+          type: string
+          format: date
+          example: "2026-04-22"
+        starting_balance:
+          type: number
+          example: 5000000
+        amount_withdrawn:
+          type: number
+          example: 500000
+        months_held:
+          type: integer
+          example: 3
+        yearly_return:
+          type: number
+          example: 7.00
+        monthly_return_rate:
+          type: number
+          description: yearly_return / 12, expressed as percent
+          example: 0.5833
+        interest_earned:
+          type: number
+          example: 87500
+        balance_before_withdrawal:
+          type: number
+          description: starting_balance + interest_earned
+          example: 5087500
+        ending_balance:
+          type: number
+          description: balance_before_withdrawal − amount_withdrawn
+          example: 4587500
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+          example:
+            success: false
+            message: Resource not found
+
+    ValidationError:
+      description: Validation failed — missing or invalid fields
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Validation error
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    message:
+                      type: string
+          example:
+            success: false
+            message: Validation error
+            errors:
+              - field: name
+                message: Name is required
+              - field: yearly_return
+                message: Yearly return must be between 0.01 and 100
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          example:
+            success: false
+            message: Internal server error
