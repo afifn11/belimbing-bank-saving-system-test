@@ -11,9 +11,8 @@ const sequelize = new Sequelize(
     dialect: 'mysql',
     logging: false,
     dialectOptions: {
-      sessionVariables: {
-        sql_mode: 'NO_ENGINE_SUBSTITUTION',
-      },
+      dateStrings: true,
+      typeCast: true,
     },
   }
 );
