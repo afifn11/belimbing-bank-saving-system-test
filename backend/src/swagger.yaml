@@ -6,7 +6,7 @@ info:
 
     ## Base URL
     - **Local:** `http://localhost:5000/api/v1`
-    - **Production:** `https://<your-app>.railway.app/api/v1`
+    - **Production:** `https://belimbing-bank-saving-system-test.up.railway.app/api/v1`
 
     ## Standard Response Format
     All endpoints return a consistent response envelope:

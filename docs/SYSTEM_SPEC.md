@@ -273,7 +273,7 @@ Interactive API documentation is available via **Swagger UI**, self-hosted on th
 | Environment | URL |
 |-------------|-----|
 | Local       | `http://localhost:5000/api/docs` |
-| Production  | `https://<your-app>.railway.app/api/docs` |
+| Production  | `https://belimbing-bank-saving-system-test.up.railway.app/api/docs` |
 
 The documentation covers all 17 endpoints with:
 - Full request body schemas

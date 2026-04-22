@@ -7,9 +7,9 @@
 
 | Service | URL |
 |---------|-----|
-| Frontend | `https://<your-app>.vercel.app` |
-| Backend API | `https://<your-app>.railway.app` |
-| **API Docs (Swagger)** | `https://<your-app>.railway.app/api/docs` |
+| Frontend | `https://belimbing-bank-saving-system-test.vercel.app` |
+| Backend API | `https://belimbing-bank-saving-system-test.up.railway.app` |
+| **API Docs (Swagger)** | `https://belimbing-bank-saving-system-test.up.railway.app/api/docs` |
 
 ---
 
