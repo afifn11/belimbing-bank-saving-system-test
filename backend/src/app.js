@@ -35,7 +35,7 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Belimbing Bank API is running',
-    docs: `http://localhost:${PORT}/api/docs`,
+    docs: `${req.protocol}://${req.get('host')}/api/docs`,
   });
 });
 
@@ -58,7 +58,7 @@ sequelize
   .authenticate()
   .then(() => {
     console.log('Database connected');
-    return sequelize.sync({ alter: true });
+    return sequelize.sync({ force: false, alter: false });
   })
   .then(() => {
     app.listen(PORT, () => {
