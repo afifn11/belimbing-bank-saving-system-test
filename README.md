@@ -385,8 +385,8 @@ All errors: `{ "success": false, "message": "...", "errors": [...] }`
 
 ## 📎 Resources
 
-- [API Documentation (Swagger)](https://your-app.railway.app/api/docs)
-- [Figma Mockup](<YOUR_FIGMA_LINK_HERE>)
+- [API Documentation (Swagger)](https://belimbing-bank-saving-system-test.up.railway.app/api/docs)
+- [Figma Mockup](<https://www.figma.com/design/9QFhDLSMHWChafHyG7HSgG/belimbing-test?node-id=0-1&t=gA9X8tOlRZFSLTSP-1>)
 - [Postman Collection](./docs/Belimbing_Bank_API.postman_collection.json)
 - [System Specification](./docs/SYSTEM_SPEC.md)
 - [API Calls Per Screen](./docs/API_CALLS_PER_SCREEN.md)
