@@ -28,7 +28,7 @@ info:
 servers:
   - url: http://localhost:5000/api/v1
     description: Local development
-  - url: https://<your-app>.railway.app/api/v1
+  - url: https://belimbing-bank-saving-system-test.up.railway.app/api/v1
     description: Production (Railway)
 
 tags:
